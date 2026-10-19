@@ -22,7 +22,7 @@
 
 - **操作系统**：Linux (Ubuntu 20.04+推荐) / Windows 10+ / macOS 10.15+
 - **Python**：3.11 或更高版本
-- **MySQL**：5.7 或更高版本
+- **MySQL**：5.7 或更高版本（使用 Docker Compose 时已内置 MySQL 8.0，无需单独安装）
 - **内存**：512MB RAM（推荐 1GB+）
 - **磁盘空间**：2GB+
 - **网络**：稳定的互联网连接
@@ -80,13 +80,17 @@ CHANNEL_USERNAME=pk_oa
 CHANNEL_URL=https://t.me/pk_oa
 ADMIN_USER_ID=123456789
 
-# MySQL 数据库配置
-MYSQL_HOST=your_mysql_host
+# MySQL 数据库配置（Docker Compose 会自动启动内置 MySQL）
 MYSQL_PORT=3306
 MYSQL_USER=tgbot_user
 MYSQL_PASSWORD=your_secure_password
 MYSQL_DATABASE=tgbot_verify
+MYSQL_ROOT_PASSWORD=your_secure_root_password
 ```
+
+> Docker Compose 默认通过服务名 `mysql` 连接内置数据库，数据保存在
+> `mysql_data` 卷中。只有改用外部 MySQL 时，才需要在 `.env` 中设置
+> `MYSQL_HOST`。
 
 #### 2. 启动服务
 
@@ -350,6 +354,9 @@ _verification_semaphores = {
 **问题**：`pymysql.err.OperationalError: (2003, "Can't connect to MySQL server")`
 
 **解决方案**：
+- Docker Compose 部署时确认内置数据库已启动：`docker compose ps mysql`
+- 查看数据库日志：`docker compose logs mysql`
+- 等待 `mysql` 健康检查通过后再启动机器人
 - 检查 MySQL 服务是否运行：`systemctl status mysql`
 - 检查数据库配置是否正确
 - 检查防火墙设置
@@ -419,10 +426,13 @@ tail -f logs/bot.log
 ### 备份数据库
 
 ```bash
-# 完整备份
+# Docker Compose 完整备份
+docker compose exec mysql mysqldump -u tgbot_user -p tgbot_verify > backup_$(date +%Y%m%d).sql
+
+# 外部 MySQL 完整备份
 mysqldump -u tgbot_user -p tgbot_verify > backup_$(date +%Y%m%d).sql
 
-# 只备份数据
+# 外部 MySQL 只备份数据
 mysqldump -u tgbot_user -p --no-create-info tgbot_verify > data_backup.sql
 
 # 恢复备份
